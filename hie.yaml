@@ -1,0 +1,10 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "cataclysm-launcher-hs:lib"
+
+    - path: "./app/Main.hs"
+      component: "cataclysm-launcher-hs:exe:cataclysm-launcher-hs-exe"
+
+    - path: "./test"
+      component: "cataclysm-launcher-hs:test:cataclysm-launcher-hs-test"
