@@ -35,6 +35,13 @@ import qualified Data.Text as T
 
 mainLoop :: IO ()
 mainLoop = do
+  initialize
+  config <- makeConfig
+  model <- makeModel
+  startApp model handleEvent buildUI config
+
+initialize :: IO ()
+initialize = do
   let repo = [ "game", "mods", "soundpacks", "tilesets" ]
    in mapM_ (createDirectoryIfMissing True) $ concat
         [ [ "sys-repo", "user-repo", "cache", "sandbox" ]
@@ -42,6 +49,23 @@ mainLoop = do
         , [ "user-repo" </> r | r <- repo ]
         , [ "cache" </> r | r <- repo ]
         ]
+
+makeConfig :: IO [AppConfig AppModel AppEvent]
+makeConfig = return
+    [ appWindowTitle "Cataclysm Launcher HS"
+    , appTheme darkTheme
+    , appFontDef "Regular" "./assets/fonts/HackGen-Regular.ttf"
+--      , appFontDef "Regular" "./assets/fonts/Roboto-Regular.ttf"
+--      , appFontDef "Medium" "./assets/fonts/Roboto-Medium.ttf"
+--      , appFontDef "Bold" "./assets/fonts/Roboto-Bold.ttf"
+--      , appFontDef "Italic" "./assets/fonts/Roboto-Italic.ttf"
+    , appInitEvent AppInit
+    , appDisableAutoScale True
+--      , appScaleFactor 2
+    ]
+
+makeModel :: IO AppModel
+makeModel = do
   doesFileAvailable <- doesFileExist "launcher_available.json"
   let readFileAvailable path = BL.readFile path
         `catchIO` const (return BL.empty)
@@ -49,57 +73,49 @@ mainLoop = do
     then readFileAvailable "launcher_available.json"
     else return BL.empty
   listGame <- listDirectory "sys-repo/game"
-  listSandbox <- listDirectory "sandbox"
-  startApp (model gameAvailable listGame listSandbox) handleEvent buildUI config
-  where
-    config =
-      [ appWindowTitle "Cataclysm Launcher HS"
-      , appTheme darkTheme
-      , appFontDef "Regular" "./assets/fonts/HackGen-Regular.ttf"
---      , appFontDef "Regular" "./assets/fonts/Roboto-Regular.ttf"
---      , appFontDef "Medium" "./assets/fonts/Roboto-Medium.ttf"
---      , appFontDef "Bold" "./assets/fonts/Roboto-Bold.ttf"
---      , appFontDef "Italic" "./assets/fonts/Roboto-Italic.ttf"
-      , appInitEvent AppInit
-      , appDisableAutoScale True
---      , appScaleFactor 2
-      ]
-    model gameAvailable listGame listSandbox = AppModel
-      { _appModelCataclysmVariant = CDDA
-      , _appModelSelectedTab = TabGame
-      , _appModelIsLoading = False
-      , _appModelGame = def
-          & availables .~ fromMaybe [] gameAvailable
-          & installedVersion .~ map T.pack listGame
-      , _appModelMods = ModsModel
-        { _modsModelInstalled = ""
-        , _modsModelIsShowStock = False
-        , _modsModelIsShowInstalled = False
-        }
-      , _appModelSoundpacks = SoundpacksModel
-        { _soundpacksModelInstalled = ""
-        , _soundpacksModelIsShowStock = False
-        , _soundpacksModelDownloadable = ""
-        }
-      , _appModelFonts = FontsModel
-        { _fontsModelAvailable = ""
-        , _fontsModelIsPreviewCyrillic = False
-        , _fontsModelFontSizeUI = 16
-        , _fontsModelFontSizeMap = 16
-        , _fontsModelFontSizeOvermap = 16
-        , _fontsModelFontBlending = True
-        }
-      , _appModelBackups = BackupsModel
-        { _backupsModelSaveDirectory = ""
-        , _backupsModelManualBackupName = "backup_xxxx-xx-xx"
-        }
-      , _appModelSettings = SettingsModel
-        { _settingsModelAnysetting = 0
-        }
-      , _appModelSandbox = SandboxModel
-        { _sandboxModelSandboxName = ""
-        , _sandboxModelSandboxList = map T.pack listSandbox
-        , _sandboxModelActiveSandbox = ""
-        }
+  listSandbox <- do
+    dir <- listDirectory "sandbox"
+    if null dir
+       then do
+         let name' = "sandbox1"
+         createDirectoryIfMissing True $ "sandbox" </> name'
+         return [name']
+       else return dir
+  return $ AppModel
+    { _appModelCataclysmVariant = CDDA
+    , _appModelSelectedTab = TabGame
+    , _appModelIsLoading = False
+    , _appModelGame = def
+        & availables .~ fromMaybe [] gameAvailable
+        & installedVersion .~ map T.pack listGame
+    , _appModelMods = ModsModel
+      { _modsModelInstalled = ""
+      , _modsModelIsShowStock = False
+      , _modsModelIsShowInstalled = False
       }
-
+    , _appModelSoundpacks = SoundpacksModel
+      { _soundpacksModelInstalled = ""
+      , _soundpacksModelIsShowStock = False
+      , _soundpacksModelDownloadable = ""
+      }
+    , _appModelFonts = FontsModel
+      { _fontsModelAvailable = ""
+      , _fontsModelIsPreviewCyrillic = False
+      , _fontsModelFontSizeUI = 16
+      , _fontsModelFontSizeMap = 16
+      , _fontsModelFontSizeOvermap = 16
+      , _fontsModelFontBlending = True
+      }
+    , _appModelBackups = BackupsModel
+      { _backupsModelSaveDirectory = ""
+      , _backupsModelManualBackupName = "backup_xxxx-xx-xx"
+      }
+    , _appModelSettings = SettingsModel
+      { _settingsModelAnysetting = 0
+      }
+    , _appModelSandbox = SandboxModel
+      { _sandboxModelSandboxName = ""
+      , _sandboxModelSandboxList = map T.pack listSandbox
+      , _sandboxModelActiveSandbox = ""
+      }
+    }
