@@ -75,7 +75,7 @@ makeModel = do
   listGame <- listDirectory "sys-repo/game"
   listSandbox <- do
     dir <- listDirectory "sandbox"
-    if null dir
+    map T.pack <$> if null dir
        then do
          let name' = "sandbox1"
          createDirectoryIfMissing True $ "sandbox" </> name'
@@ -115,7 +115,9 @@ makeModel = do
       }
     , _appModelSandbox = SandboxModel
       { _sandboxModelSandboxName = ""
-      , _sandboxModelSandboxList = map T.pack listSandbox
-      , _sandboxModelActiveSandbox = ""
+      , _sandboxModelSandboxList = listSandbox
+      , _sandboxModelActiveSandbox = case listSandbox of
+                                       [] -> ""
+                                       s:_ -> s
       }
     }

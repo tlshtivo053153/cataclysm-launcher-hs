@@ -80,7 +80,7 @@ eventGame model EndInstall =
 eventGame model Play =
   [ Model $ model & isLoading .~ True
   , Task $ do
-      playGame (model^.game)
+      playGame model
         `catchIO` (\e -> print e >> putStrLn "error: playGame")
       return $ AppGame EndPlay
   ]
@@ -93,6 +93,7 @@ eventGame _ _ = []
 
 getAvailable :: IO [Available]
 getAvailable = do
+  putStrLn "call getAvailable"
   releases <- GitHub.github' (GitHub.releasesR "CleverRaven" "Cataclysm-DDA") 1
   let avails =
         case releases of
@@ -127,7 +128,7 @@ toAvailable r = do
           <$> V.find (\x -> env `T.isPrefixOf` GitHub.releaseAssetName x) assets
 
 writeFileAvailable :: [Available] -> IO ()
-writeFileAvailable [] = return ()
+writeFileAvailable [] = putStrLn "available is empty"
 writeFileAvailable as =
   BL.writeFile "launcher_available.json" $ encodePretty as
 
@@ -185,11 +186,12 @@ extractLinux repoName archive = do
 --  Tar.extractTarball archive (Just path)
 --  r <- Tar.extractTarballLenient archive (Just path)
 
-playGame :: GameModel -> IO ()
+playGame :: AppModel -> IO ()
 playGame model = do
-  let path = "sys-repo"</>"game"</> T.unpack (model^.activeInstall) </> "cataclysmdda-0.I"
+  let path = "sys-repo"</>"game"</> T.unpack (model^.game.activeInstall) </> "cataclysmdda-0.I"
   userPath <- do
     cd <- getCurrentDirectory
-    return $ cd </> "sandbox" </> "sandbox1" <> [pathSeparator]
+    let sandboxName' = T.unpack $ model^.sandbox.activeSandbox
+    return $ cd </> "sandbox" </> sandboxName' <> [pathSeparator]
   doesExistProgram <- doesFileExist $ path </> "cataclysm-tiles"
   when doesExistProgram $ callProcess (path </> "cataclysm-launcher") ["--userdir", userPath]
