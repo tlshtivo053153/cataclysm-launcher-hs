@@ -20,9 +20,12 @@ import CL.UI.Backups
 import CL.UI.Settings
 import qualified CL.Define.Game as G
 
+import qualified CL.GitHub as GH
+
 import Control.Lens
 import Monomer
 
+import Data.Aeson.Lens
 import Data.Aeson
 import Data.Aeson.Encode.Pretty
 import qualified Data.ByteString.Lazy as BL
@@ -31,7 +34,6 @@ import System.FilePath
 import Control.Monad
 import Control.Monad.IO.Class
 import Network.HTTP.Req
-import qualified GitHub
 import qualified Text.URI as URI
 
 import qualified Data.Text as T
@@ -55,7 +57,7 @@ eventGame model G.Refresh =
   if model ^. game.channel == Stable
      then []
      else [ Model $ model & isLoading .~ True
-          , Task $ AppGame . RefreshAvailable <$> (getAvailable `catch` (\e -> print (e :: IOException) >> return []))
+          , Task $ AppGame . RefreshAvailable <$> (getAvailables `catch` (\e -> print (e :: IOException) >> return []))
           ]
 eventGame model (RefreshAvailable []) = [ Model $ model & isLoading .~ False ]
 eventGame model (RefreshAvailable cs) =
@@ -91,56 +93,47 @@ eventGame model Active =
   [ Model $ model & game.activeInstall .~ (model^.game.version) ]
 eventGame _ _ = []
 
-getAvailable :: IO [Available]
-getAvailable = do
-  putStrLn "call getAvailable"
-  releases <- GitHub.github' (GitHub.releasesR "CleverRaven" "Cataclysm-DDA") 1
-  let avails =
-        case releases of
-          Left _ -> []
-          Right r -> V.toList $ V.mapMaybe toAvailable r
-  writeFileAvailable avails
-  return avails
+getAvailables :: IO [Available]
+getAvailables = do
+  releases <- GH.getGitHubReleases "CleverRaven" "Cataclysm-DDA"
+  let avail = toAvailables releases
+  case avail of
+    Just avail' -> do
+      writeFileAvailables avail'
+      return avail'
+    Nothing -> return []
 
---getCommits :: IO [GithubCommit]
---getCommits = do
---  c <- GitHub.github' (GitHub.commitsForR "CleverRaven" "Cataclysm-DDA") 10
---  return $ case c of
---    Left _ -> []
---    Right c' -> []
-
-toAvailable :: GitHub.Release -> Maybe Available
-toAvailable r = do
-  win <- findUrl "cdda-windows-tiles-x64-"
-  winMsvc <- findUrl "cdda-windows-tiles-x64-msvc-"
-  linux <- findUrl "cdda-linux-tiles-x64-"
-  return Available
-    { _availableName = GitHub.releaseName r
-    , _availableTag = GitHub.releaseTagName r
-    , _availableUrlWindows = win
-    , _availableUrlWindowsMsvc = winMsvc
-    , _availableUrlLinux = linux
-    }
+toAvailables :: Value -> Maybe [Available]
+toAvailables v = do
+  v' <- v ^? _Array
+  return $ V.toList $ V.catMaybes $ fmap toAvail v'
     where
-      assets = GitHub.releaseAssets r
-      findUrl env =
-        GitHub.releaseAssetBrowserDownloadUrl
-          <$> V.find (\x -> env `T.isPrefixOf` GitHub.releaseAssetName x) assets
+      toAvail x = do
+        name' <- x ^? key "name" . _String
+        tag' <- x ^? key "tag_name" . _String
+        assets <- x ^? key "assets" . _Array
+        win <- findUrl assets "cdda-windows-tiles-x64-"
+        winMsvc <- findUrl assets "cdda-windows-tiles-x64-msvc-"
+        linux <- findUrl assets "cdda-linux-tiles-x64-"
+        Just $ Available
+          { _availableName = name'
+          , _availableTag = tag'
+          , _availableUrlWindows = win
+          , _availableUrlWindowsMsvc = winMsvc
+          , _availableUrlLinux = linux
+          }
+      findUrl assets platform' = do
+        let p asset =
+              case asset ^? key "name" . _String of
+                Just name' -> platform' `T.isPrefixOf` name'
+                Nothing -> False
+        a <- V.find p assets
+        a ^? key "browser_download_url" . _String
 
-writeFileAvailable :: [Available] -> IO ()
-writeFileAvailable [] = putStrLn "available is empty"
-writeFileAvailable as =
+writeFileAvailables :: [Available] -> IO ()
+writeFileAvailables [] = putStrLn "available is empty"
+writeFileAvailables as =
   BL.writeFile "launcher_available.json" $ encodePretty as
-
---toGithubCommit :: GitHub.Commit -> GithubCommit
---toGithubCommit c = GithubCommit
---  { _githubCommitDate = undefined
---  , _githubCommitHash = T.pack $ show $ GitHub.commitSha c
---  , _githubCommitUrlWindows = undefined
---  , _githubCommitUrlLinux = undefined
---  }
---    where
---      gitCommit = GitHub.commitGitCommit c
 
 installAvailable :: Platform -> Available -> IO ()
 installAvailable p avail = do

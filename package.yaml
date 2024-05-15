@@ -26,11 +26,12 @@ dependencies:
 - text
 - text-show
 - data-default
-- github
+- github-rest
 - vector
 - aeson
 - aeson-casing
 - aeson-pretty
+- lens-aeson
 - bytestring
 - safe-exceptions
 - directory

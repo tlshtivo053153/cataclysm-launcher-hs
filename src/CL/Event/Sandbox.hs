@@ -32,7 +32,6 @@ import System.FilePath
 import Control.Monad
 import Control.Monad.IO.Class
 import Network.HTTP.Req
-import qualified GitHub
 import qualified Text.URI as URI
 
 import qualified Data.Text as T
