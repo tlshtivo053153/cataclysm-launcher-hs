@@ -62,7 +62,7 @@ eventGame model G.Refresh =
 eventGame model (RefreshAvailable []) = [ Model $ model & isLoading .~ False ]
 eventGame model (RefreshAvailable cs) =
   [ Model $ model & game.availables .~ cs
-  , Model $ model & isLoading .~ False
+                  & isLoading .~ False
   ]
 eventGame model Install =
   [ Model $ model & isLoading .~ True
@@ -78,7 +78,9 @@ eventGame model Install =
       return $ AppGame EndInstall
   ]
 eventGame model EndInstall =
-  [ Model $ model & isLoading .~ False ]
+  [ Model $ model & isLoading .~ False
+                  & game.installedVersion %~ (model^.game.selectAvailable :)
+  ]
 eventGame model Play =
   [ Model $ model & isLoading .~ True
   , Task $ do
