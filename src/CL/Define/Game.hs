@@ -74,7 +74,7 @@ data GameEvent
   = Refresh
   | RefreshAvailable [Available]
   | Install
-  | EndInstall
+  | EndInstall (Maybe T.Text)
   | Play
   | EndPlay
   | Active

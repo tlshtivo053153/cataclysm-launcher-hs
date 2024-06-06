@@ -70,17 +70,27 @@ eventGame model Install =
       putStrLn "Start Event Game Install"
       let avail = L.find (\x -> x^.name == model^.game.selectAvailable) $ model^.game.availables
       putStrLn $ "avail: " ++ show avail
-      case avail of
-        Just avail' -> installAvailable (model^.game.platform) avail'
-                            `catchIO` (\e -> print e >> putStrLn "error: installAvailable")
-        Nothing -> return ()
+      installedText <- case avail of
+        Just avail' ->
+          let f = do
+                installAvailable (model^.game.platform) avail'
+                return (Just $ model^.game.selectAvailable)
+              g e = do
+                print e
+                putStrLn "error: installAvailable"
+                return Nothing
+          in f `catchIO` g
+        Nothing -> return Nothing
       putStrLn "End Event Game Install"
-      return $ AppGame EndInstall
+      return $ AppGame (EndInstall installedText)
   ]
-eventGame model EndInstall =
+eventGame model (EndInstall Nothing) =
+  [ Model $ model & isLoading .~ False ]
+eventGame model (EndInstall (Just installedText)) =
   [ Model $ model & isLoading .~ False
-                  & game.installedVersion %~ (model^.game.selectAvailable :)
+                  & game.installedVersion %~ (installedText:)
   ]
+
 eventGame model Play =
   [ Model $ model & isLoading .~ True
   , Task $ do
