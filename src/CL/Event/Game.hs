@@ -183,10 +183,19 @@ extractLinux repoName archive = do
 
 playGame :: AppModel -> IO ()
 playGame model = do
-  let path = "sys-repo"</>"game"</> T.unpack (model^.game.activeInstall) </> "cataclysmdda-0.I"
+  path <- do
+    let p = "sys-repo"</>"game"</> T.unpack (model^.game.activeInstall)
+    listDir <- listDirectory p
+    let cddaDir = L.find (L.isPrefixOf "cataclysmdda-") listDir
+    return $ case cddaDir of
+      Just d -> Just $ p </> d
+      Nothing -> Nothing
   userPath <- do
     cd <- getCurrentDirectory
     let sandboxName' = T.unpack $ model^.sandbox.activeSandbox
     return $ cd </> "sandbox" </> sandboxName' <> [pathSeparator]
-  doesExistProgram <- doesFileExist $ path </> "cataclysm-tiles"
-  when doesExistProgram $ callProcess (path </> "cataclysm-launcher") ["--userdir", userPath]
+  case path of
+    Just p -> do
+      doesExistProgram <- doesFileExist $ p </> "cataclysm-launcher"
+      when doesExistProgram $ callProcess (p </> "cataclysm-launcher") ["--userdir", userPath]
+    Nothing -> return ()
