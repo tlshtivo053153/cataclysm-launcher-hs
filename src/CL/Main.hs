@@ -4,6 +4,7 @@ module CL.Main
   ) where
 
 import CL.Define
+import CL.Define.Core
 import CL.Define.Game
 import CL.Define.Mods
 import CL.Define.Soundpacks
@@ -119,5 +120,9 @@ makeModel = do
       , _sandboxModelActiveSandbox = case listSandbox of
                                        [] -> ""
                                        s:_ -> s
+      , _sandboxModelIsMakingSandbox = False
+      , _sandboxModelNewName = ""
+      , _sandboxModelNewVariant = CDDA
+      , _sandboxModelNewVersion = VDDA DDAVerExperimental
       }
     }

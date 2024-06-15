@@ -4,6 +4,7 @@ module CL.UI
   ) where
 
 import CL.Define
+import CL.Define.Core
 import CL.Define.Game
 import CL.Define.Mods
 import CL.Define.Soundpacks

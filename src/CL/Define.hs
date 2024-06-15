@@ -1,11 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module CL.Define
-  ( CataclysmVariant(..)
-  , SelectTab(..)
-  , AppModel(..)
+  ( AppModel(..)
   , AppEvent(..)
   ) where
 
+import CL.Define.Core
 import CL.Define.Game
 import CL.Define.Mods
 import CL.Define.Soundpacks
@@ -13,34 +12,6 @@ import CL.Define.Fonts
 import CL.Define.Backups
 import CL.Define.Settings
 import CL.Define.Sandbox
-
-data CataclysmVariant
-  = CDDA
-  | CBN
-  deriving (Eq)
-
-data SelectTab
-  = TabSandbox
-  | TabGame
-  | TabMods
-  | TabSoundpacks
-  | TabFonts
-  | TabBackups
-  | TabSettings
-  deriving (Eq)
-
-instance Show SelectTab where
-  show TabSandbox = "Sandbox"
-  show TabGame = "Game"
-  show TabMods = "Mods"
-  show TabSoundpacks = "Soundpacks"
-  show TabFonts = "Fonts"
-  show TabBackups = "Backups"
-  show TabSettings = "Settings"
-
-instance Show CataclysmVariant where
-  show CDDA = "Cataclysm: Dark Days Ahead"
-  show CBN = "Cataclysm: Bright Night"
 
 data AppModel = AppModel
   { _appModelCataclysmVariant :: CataclysmVariant

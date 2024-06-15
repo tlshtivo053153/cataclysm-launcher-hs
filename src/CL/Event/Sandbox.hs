@@ -4,6 +4,7 @@ module CL.Event.Sandbox
   ) where
 
 import CL.Define
+import CL.Define.Core
 import CL.Define.Game
 import CL.Define.Mods
 import CL.Define.Soundpacks
@@ -53,4 +54,22 @@ import Control.Exception.Safe
 eventSandbox :: AppModel -> SandboxEvent -> [AppEventResponse AppModel AppEvent]
 eventSandbox model Switch =
   [ Model $ model & sandbox.activeSandbox .~ (model ^. sandbox.sandboxName) ]
-eventSandbox model _ = []
+eventSandbox model New =
+  [ Model $ model & sandbox.isMakingSandbox .~ True
+                  & sandbox.newName .~ ""
+                  & sandbox.newVariant .~ CDDA
+                  & sandbox.newVersion .~ VDDA DDAVerExperimental
+  ]
+eventSandbox model Copy = []
+eventSandbox model Rename = []
+eventSandbox model (AddSandbox n) =
+  [ Model $ model & sandbox.sandboxList %~ (n:) ]
+eventSandbox model MakeOK =
+  [ Model $ model & sandbox.isMakingSandbox .~ False
+  , Task $ do
+      createDirectoryIfMissing True $ "sandbox" </> T.unpack (model^.sandbox.newName)
+      return $ AppSandbox $ AddSandbox $ model^.sandbox.newName
+  ]
+eventSandbox model MakeCancel =
+  [ Model $ model & sandbox.isMakingSandbox .~ False
+  ]
